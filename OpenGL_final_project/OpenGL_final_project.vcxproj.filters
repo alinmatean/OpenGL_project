@@ -54,8 +54,6 @@
     <None Include="shaders\screenQuad.vert" />
     <None Include="shaders\shaderStart.vert" />
     <None Include="shaders\skyboxShader.vert" />
-    <None Include="shaders\transparency.frag" />
-    <None Include="shaders\transparency.vert" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Camera.hpp">

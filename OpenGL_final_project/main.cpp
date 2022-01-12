@@ -17,6 +17,8 @@
 
 // window
 gps::Window myWindow;
+int glWindowWidth = 1920;
+int glWindowHeight = 1080;
 
 const unsigned int SHADOW_WIDTH = 4096;
 const unsigned int SHADOW_HEIGHT = 4096;
@@ -53,6 +55,8 @@ GLuint shadowMapFBO;
 GLuint depthMapTexture;
 GLuint fogDensityLoc;
 GLuint fogLoc;
+GLint fog = 0.0f;
+GLint point_light = 0.0f;
 
 // camera
 gps::Camera myCamera(
@@ -62,8 +66,8 @@ gps::Camera myCamera(
 float cameraSpeed = 0.1f;
 bool firstMouse = true;
 bool showDepthMap;
-float lastXPos = 1920.0 / 2.0;
-float lastYPos = 1080.0 / 2.0;
+float lastXPos = glWindowWidth / 2.0;
+float lastYPos = glWindowHeight / 2.0;
 GLboolean pressedKeys[1024];
 
 // models
@@ -117,6 +121,7 @@ std::vector<const GLchar*> faces;
 gps::SkyBox mySkyBox;
 gps::Shader skyboxShader;
 
+//amimatii
 float angleDoor1 = 0.0f;
 float angleDoor2 = 0.0f;
 float angleDoor3 = 0.0f;
@@ -126,8 +131,6 @@ int night = false;
 bool aprinde_lumanare = false;
 bool animatie = false;
 int vizualizare_scena = 0;
-GLint fog = 0.0f;
-GLint point_light = 0.0f;
 
 GLenum glCheckError_(const char *file, int line)
 {
@@ -206,9 +209,13 @@ void mouseCallback(GLFWwindow* window, double xpos, double ypos) {
     }
     else
     {
-        myCamera.rotate((-1) * (lastYPos - ypos) * cameraSpeed, (xpos - lastXPos) * cameraSpeed);
+        float yoffset = lastYPos - ypos;
+        float xoffset = xpos - lastXPos;
+        myCamera.rotate((-1) * yoffset * cameraSpeed, xoffset * cameraSpeed);
+        
         view = myCamera.getViewMatrix();
         glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
+        
         lastXPos = xpos;
         lastYPos = ypos;
     }
@@ -401,7 +408,7 @@ void processMovement() {
 }
 
 void initOpenGLWindow() {
-    myWindow.Create(1920, 1080, "OpenGL Project Core");
+    myWindow.Create(glWindowWidth, glWindowHeight, "OpenGL Project Core");
 }
 
 void setWindowCallbacks() {

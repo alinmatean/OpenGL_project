@@ -77,7 +77,7 @@ void computeLightComponents()
 float computeShadow()
 {
 	// perform perspective divide
-	vec3 normalizedCoords = fragPosLightSpace.xyz / fragPosLightSpace.w;
+	/*vec3 normalizedCoords = fragPosLightSpace.xyz / fragPosLightSpace.w;
 	normalizedCoords = normalizedCoords * 0.5 + 0.5;
 	if(normalizedCoords.z > 1.0f)
 		return 0.0f;
@@ -85,29 +85,25 @@ float computeShadow()
 	float currentDepth = normalizedCoords.z;
 	float bias = 0.005f;
 	float shadow = currentDepth - bias > closestDepth ? 1.0 : 0.0;
-	return shadow;
-	/*float shadow  = 0.0;
-	float bias    = 0.05; 
-	float samples = 4.0;
-	float offset  = 0.1;
+	return shadow;*/
 	vec3 normalizedCoords = fragPosLightSpace.xyz / fragPosLightSpace.w;
-	float currentDepth = normalizedCoords.z;
-	for(float x = -offset; x < offset; x += offset / (samples * 0.5))
+	normalizedCoords = normalizedCoords * 0.5 + 0.5;
+	float bias = 0.005f;
+	float shadow = 0.0f;
+	if(normalizedCoords.z > 1.0f)
+		return 0.0f;
+	vec2 texelSize = 1.0 / textureSize(shadowMap, 0);
+	for(int x = -2; x <= 2; x++)
 	{
-		for(float y = -offset; y < offset; y += offset / (samples * 0.5))
+		for(int y = -2; y <= 2; y++)
 		{
-			for(float z = -offset; z < offset; z += offset / (samples * 0.5))
-			{
-				vec3 coord = vec3(x, y, z);
-				float closestDepth = texture(shadowMap, normalizedCoords.xy + coord.xy).r; 
-				closestDepth *= far_plane;   // undo mapping [0;1]
-				if(currentDepth - bias > closestDepth)
-					shadow += 1.0;
-			}
+			float pcfDepth = texture(shadowMap, normalizedCoords.xy + vec2(x, y)*texelSize).r;
+			float currentDepth = normalizedCoords.z;
+			shadow += currentDepth - bias > pcfDepth ? 1.0 : 0.0;
 		}
 	}
-	shadow /= (samples * samples * samples);
-	return shadow;*/
+	shadow /= 25.0;
+	return shadow;
 }
 
 float computeFog()
