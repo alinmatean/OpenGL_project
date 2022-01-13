@@ -41,6 +41,10 @@ glm::vec3 lightDir_p;
 glm::vec3 lightColor_p;
 glm::vec3 lightPos_p;
 
+glm::vec3 lightDir_p2;
+glm::vec3 lightColor_p2;
+glm::vec3 lightPos_p2;
+
 // shader uniform locations
 GLuint modelLoc;
 GLuint viewLoc;
@@ -48,9 +52,12 @@ GLuint projectionLoc;
 GLuint normalMatrixLoc;
 GLuint lightDirLoc;
 GLuint lightDirLoc_p;
+GLuint lightDirLoc_p2;
 GLuint lightColorLoc;
 GLuint lightColorLoc_p;
+GLuint lightColorLoc_p2;
 GLuint lightPosLoc_p;
+GLuint lightPosLoc_p2;
 GLuint shadowMapFBO;
 GLuint depthMapTexture;
 GLuint fogDensityLoc;
@@ -109,6 +116,7 @@ gps::Model3D torch;
 gps::Model3D stilou;
 gps::Model3D cer;
 gps::Model3D flacara;
+gps::Model3D pasari;
 
 // shaders
 gps::Shader myCustomShader;
@@ -127,10 +135,12 @@ float angleDoor2 = 0.0f;
 float angleDoor3 = 0.0f;
 float angleDoor4 = 0.0f;
 float angleChest = 0.0f;
+float angleBird = 0.0f;
 int night = false;
 bool aprinde_lumanare = false;
-bool animatie = false;
-int vizualizare_scena = 0;
+bool start_animation = false;
+enum PRESENTATION { A1, A2, A3, A4, A5 };
+PRESENTATION animation;
 
 GLenum glCheckError_(const char *file, int line)
 {
@@ -221,12 +231,6 @@ void mouseCallback(GLFWwindow* window, double xpos, double ypos) {
     }
 }
 
-void draw_night(gps::Shader shader) {
-    shader.useShaderProgram();
-    model = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, -1.5f, 0.0f));
-    glUniformMatrix4fv(glGetUniformLocation(shader.shaderProgram, "model"), 1, GL_FALSE, glm::value_ptr(model));
-    cer.Draw(shader);
-}
 
 void make_night() {
     lightColor.x = 0.0f;
@@ -238,9 +242,9 @@ void make_night() {
 }
 
 void make_day() {
-    lightColor.x += 0.10f;
-    lightColor.y += 0.10f;
-    lightColor.z += 0.10f;
+    lightColor.x = 1.0f;
+    lightColor.y = 1.0f;
+    lightColor.z = 1.0f;
     myCustomShader.useShaderProgram();
     lightColorLoc = glGetUniformLocation(myCustomShader.shaderProgram, "lightColor");
     glUniform3fv(lightColorLoc, 1, glm::value_ptr(lightColor));
@@ -362,6 +366,7 @@ void processMovement() {
 
         angleDoor3 = -1.5f;
     }
+   
     if (pressedKeys[GLFW_KEY_U] && pressedKeys[GLFW_KEY_4]) {
 
         angleDoor3 = 0.0f;
@@ -385,25 +390,20 @@ void processMovement() {
     }
     if (pressedKeys[GLFW_KEY_O]) {
         point_light = 1;
+        aprinde_lumanare = true;
     }
     if (pressedKeys[GLFW_KEY_P]) {
         point_light = 0;
+        aprinde_lumanare = false;
     }
     if (pressedKeys[GLFW_KEY_ENTER]) {
 
-        animatie = true;
         myCamera.changeCameraTarget(glm::vec3(0.0f, 0.0f, 0.0f));
-        vizualizare_scena = 1;
+        animation = A1;
+        start_animation = true;
     }
     if (pressedKeys[GLFW_KEY_K]) {
-        animatie = false;
-    }
-
-    if (pressedKeys[GLFW_KEY_B] && pressedKeys[GLFW_KEY_1]) {
-        aprinde_lumanare = true;
-    }
-    if (pressedKeys[GLFW_KEY_B] && pressedKeys[GLFW_KEY_2]) {
-        aprinde_lumanare = false;
+        start_animation = false;
     }
 }
 
@@ -474,6 +474,7 @@ void initModels() {
     torch.LoadModel("models/torch/torch.obj");
     cer.LoadModel("models/cer/cer.obj");
     flacara.LoadModel("models/flacara/flacara.obj");
+    pasari.LoadModel("models/pasari/pasare.obj");
 }
 
 void initShaders() {
@@ -528,9 +529,9 @@ void initUniforms() {
     glUniform3fv(lightColorLoc, 1, glm::value_ptr(lightColor));
 
     /// POINT LIGHT
-    lightPos_p = glm::vec3(1.0f, 0.0f, 0.0f);
+    lightPos_p = glm::vec3(20.0f, 10.0f, -5.5f);
     lightPosLoc_p = glGetUniformLocation(myCustomShader.shaderProgram, "lightPos_p");
-    glUniform3fv(lightPosLoc_p, 1, glm::value_ptr(lightPos_p));
+    glUniform3fv(lightPosLoc_p, 1, glm::value_ptr(glm::vec3(view * glm::vec4(lightPos_p, 1.0f))));
 
     //set the light direction
     lightDir_p = glm::vec3(0.0f, 1.0f, 0.0f);
@@ -539,6 +540,20 @@ void initUniforms() {
 
     lightColorLoc_p = glGetUniformLocation(myCustomShader.shaderProgram, "lightColor_p");
     glUniform3fv(lightColorLoc_p, 1, glm::value_ptr(glm::vec3(1.0f, 1.0f, 1.0f)));
+
+    ///POINT LIGHT HOUSE
+    lightPos_p2 = glm::vec3(20.0f, 10.0f, -5.5f);
+    lightPosLoc_p2 = glGetUniformLocation(myCustomShader.shaderProgram, "lightPos_p2");
+    glUniform3fv(lightPosLoc_p2, 1, glm::value_ptr(glm::vec3(view * glm::vec4(lightPos_p2, 1.0f))));
+
+    //set the light direction
+    lightDir_p2 = glm::vec3(1.0f, 1.0f, 0.0f);
+    lightDirLoc_p2 = glGetUniformLocation(myCustomShader.shaderProgram, "lightDir_p2");
+    glUniform3fv(lightDirLoc_p2, 1, glm::value_ptr(glm::inverseTranspose(glm::mat3(view)) * lightDir_p2));
+
+    lightColorLoc_p2 = glGetUniformLocation(myCustomShader.shaderProgram, "lightColor_p2");
+    glUniform3fv(lightColorLoc_p2, 1, glm::value_ptr(glm::vec3(1.0f, 0.3f, 0.3f)));
+
 
     lightShader.useShaderProgram();
     glUniformMatrix4fv(glGetUniformLocation(lightShader.shaderProgram, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
@@ -617,7 +632,6 @@ void drawObjects(gps::Shader shader, bool depthPass) {
 
     //usa care se deschide - cetate
     model = glm::mat4(1.0f);
-    model = glm::rotate(model, angleY, glm::vec3(0.0f, 1.0f, 0.0f));
     model = glm::translate(model, glm::vec3(-2.22748f, 2.7248f, 49.553f));
     model = glm::rotate(model, angleDoor1, glm::vec3(0.0f, 1.0f, 0.0f));
     model = glm::translate(model, glm::vec3(2.22748f, -2.7248f, -49.553f));
@@ -636,11 +650,9 @@ void drawObjects(gps::Shader shader, bool depthPass) {
     casa1.Draw(shader);
 
     //usa prima casa
-    model = glm::rotate(glm::mat4(1.0f), angleY, glm::vec3(0.0f, 1.0f, 0.0f));
     model = glm::translate(model, glm::vec3(19.72f, 1.51521f, 20.5583f));
     model = glm::rotate(model, angleDoor2, glm::vec3(0.0f, 1.0f, 0.0f));
     model = glm::translate(model, glm::vec3(-19.72f, -1.51521f, -20.5583f));
-    model = glm::translate(model, glm::vec3(0.0f, -1.0f, 0.0f));
     glUniformMatrix4fv(glGetUniformLocation(shader.shaderProgram, "model"), 1, GL_FALSE, glm::value_ptr(model));
     usa1.Draw(shader);
 
@@ -675,11 +687,7 @@ void drawObjects(gps::Shader shader, bool depthPass) {
     model = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, -1.0f, 0.0f));
     glUniformMatrix4fv(glGetUniformLocation(shader.shaderProgram, "model"), 1, GL_FALSE, glm::value_ptr(model));
     carte.Draw(shader);
-    
-   /* model = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, -1.0f, 0.0f));
-    glUniformMatrix4fv(glGetUniformLocation(shader.shaderProgram, "model"), 1, GL_FALSE, glm::value_ptr(model));
-    pana.Draw(shader);*/
-
+  
     ///biserica
     model = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, -1.0f, 0.0f));
     glUniformMatrix4fv(glGetUniformLocation(shader.shaderProgram, "model"), 1, GL_FALSE, glm::value_ptr(model));
@@ -694,11 +702,10 @@ void drawObjects(gps::Shader shader, bool depthPass) {
     glUniformMatrix4fv(glGetUniformLocation(shader.shaderProgram, "model"), 1, GL_FALSE, glm::value_ptr(model));
     pat2.Draw(shader);
 
-    model = glm::rotate(glm::mat4(1.0f), angleY, glm::vec3(0.0f, 0.3f, 0.0f));
+   
     model = glm::translate(model, glm::vec3(-6.94692f, 6.04674f, -21.5936f));
     model = glm::rotate(model, angleDoor3, glm::vec3(0.0f, 1.0f, 0.0f));
     model = glm::translate(model, glm::vec3(6.94692f, -6.04674f, 21.5936f));
-    model = glm::translate(model, glm::vec3(0.0f, -0.3f, 0.0f));
     glUniformMatrix4fv(glGetUniformLocation(shader.shaderProgram, "model"), 1, GL_FALSE, glm::value_ptr(model));
     usa2.Draw(shader);
 
@@ -726,11 +733,9 @@ void drawObjects(gps::Shader shader, bool depthPass) {
     glUniformMatrix4fv(glGetUniformLocation(shader.shaderProgram, "model"), 1, GL_FALSE, glm::value_ptr(model));
     wc.Draw(shader);
 
-    model = glm::rotate(glm::mat4(1.0f), angleY, glm::vec3(0.0f, 0.3f, 0.0f));
     model = glm::translate(model, glm::vec3(34.4235f, 1.25975f, -23.2887f));
     model = glm::rotate(model, angleDoor4, glm::vec3(0.0f, 1.0f, 0.0f));
     model = glm::translate(model, glm::vec3(-34.4235f, -1.25975f, 23.2887f));
-    model = glm::translate(model, glm::vec3(0.0f, -0.3f, 0.0f));
     glUniformMatrix4fv(glGetUniformLocation(shader.shaderProgram, "model"), 1, GL_FALSE, glm::value_ptr(model));
     usa_wc.Draw(shader);
 
@@ -747,11 +752,9 @@ void drawObjects(gps::Shader shader, bool depthPass) {
     glUniformMatrix4fv(glGetUniformLocation(shader.shaderProgram, "model"), 1, GL_FALSE, glm::value_ptr(model));
     cufar.Draw(shader);
 
-    model = glm::rotate(glm::mat4(1.0f), angleY, glm::vec3(0.0f, 0.3f, 0.0f));
     model = glm::translate(model, glm::vec3(19.7938f, 0.823914f, -6.01121f));
     model = glm::rotate(model, angleChest, glm::vec3(0.0f, 0.0f, -1.0f));
     model = glm::translate(model, glm::vec3(-19.7938f, -0.823914f, 6.01121f));
-    model = glm::translate(model, glm::vec3(0.0f, -0.3f, 0.0f));
     glUniformMatrix4fv(glGetUniformLocation(shader.shaderProgram, "model"), 1, GL_FALSE, glm::value_ptr(model));
     capac_cufar.Draw(shader);
 
@@ -762,6 +765,11 @@ void drawObjects(gps::Shader shader, bool depthPass) {
     model = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, -0.3f, 0.0f));
     glUniformMatrix4fv(glGetUniformLocation(shader.shaderProgram, "model"), 1, GL_FALSE, glm::value_ptr(model));
     foc.Draw(shader);
+
+    angleBird += 0.001f;
+    model = glm::rotate(model, angleBird, glm::vec3(0.0f, 1.0f, 0.0f));
+    glUniformMatrix4fv(glGetUniformLocation(shader.shaderProgram, "model"), 1, GL_FALSE, glm::value_ptr(model));
+    pasari.Draw(shader);
 
     if (aprinde_lumanare) {
         model = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, -1.0f, 0.0f));
@@ -827,7 +835,13 @@ void renderScene() {
             GL_FALSE,
             glm::value_ptr(computeLightSpaceTrMatrix()));
 
+        lightPos_p = glm::vec3(20.0f, 10.0f, -5.5f);
+        glUniform3fv(lightPosLoc_p, 1, glm::value_ptr(glm::vec3(view * glm::vec4(lightPos_p, 1.0f))));
 
+        lightPos_p2 = glm::vec3(24.93f, 0.84f, 14.12f);
+        glUniform3fv(lightPosLoc_p2, 1, glm::value_ptr(glm::vec3(view * glm::vec4(lightPos_p2, 1.0f))));
+
+    
         drawObjects(myCustomShader, false);
 
         //draw a white cube around the light
@@ -849,11 +863,18 @@ void renderScene() {
 
         sfera.Draw(lightShader);
 
+        model = glm::mat4(1.0f);
+        model = glm::translate(model, 1.0f * lightPos_p2);
+        model = glm::scale(model, glm::vec3(1/40.0f, 1/40.0f, 1/40.0f));
+        glUniformMatrix4fv(glGetUniformLocation(lightShader.shaderProgram, "model"), 1, GL_FALSE, glm::value_ptr(model));
+
+        sfera.Draw(lightShader);
+
         mySkyBox.Draw(skyboxShader, view, projection);
         glUniformMatrix4fv(glGetUniformLocation(lightShader.shaderProgram, "view"), 1, GL_FALSE, glm::value_ptr(view));
       
     }
-   
+ 
     myCustomShader.useShaderProgram();
     glUniform1i(glGetUniformLocation(myCustomShader.shaderProgram, "point"), point_light);
 
@@ -867,12 +888,12 @@ void renderScene() {
         cer.Draw(myCustomShader);
     }
     
-    if (animatie)
+    if (start_animation)
     {
-        switch (vizualizare_scena)
+        switch (animation)
         {
 
-        case 1:
+        case A1:
             myCamera.changeCameraPosition(glm::vec3(80.0f, 30.0f, 20.0f));
             //myCamera.changeCameraTarget(glm::vec3(0.0f, 0.0f, 0.0f));
             view = myCamera.getViewMatrix();
@@ -887,11 +908,11 @@ void renderScene() {
             // compute normal matrix for teapot
             normalMatrix = glm::mat3(glm::inverseTranspose(view * model));
             if (abs(myCamera.getCameraTarget().z) > 40.0f) {
-                vizualizare_scena = 2;
+                animation = A2;
 
             }
             break;
-        case 2:
+        case A2:
             myCamera.changeCameraPosition(glm::vec3(-65.0f, 21.0f, -1.0f));
             view = myCamera.getViewMatrix();
             myCustomShader.useShaderProgram();
@@ -904,35 +925,35 @@ void renderScene() {
             glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
             //std::cout << "x=" << myCamera.getCameraTarget().x << "   y=" << myCamera.getCameraTarget().y << "   z=" << myCamera.getCameraTarget().z;
             if (myCamera.getCameraTarget().z > 6.0f) {
-                vizualizare_scena = 3;
+                animation = A3;
             }
             break;
-        case 3:
+        case A3:
             myCamera.move(gps::MOVE_RIGHT, cameraSpeed * 0.5f);
             //update view matrix
             view = myCamera.getViewMatrix();
             myCustomShader.useShaderProgram();
             glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
             if (myCamera.getCameraTarget().x > 54.0f) {
-                vizualizare_scena = 4;
+                animation = A4;
             }
             break;
-        case 4:
-            myCamera.rotate(5, -3);
+        case A4:
+            myCamera.rotate(5*cameraSpeed, -3*cameraSpeed);
             //update view matrix
             view = myCamera.getViewMatrix();
             myCustomShader.useShaderProgram();
             glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
-            vizualizare_scena = 5;
+            animation = A5;
             break;
-        case 5:
+        case A5:
             myCamera.move(gps::MOVE_BACKWARD, cameraSpeed * 0.5f);
             //update view matrix
             view = myCamera.getViewMatrix();
             myCustomShader.useShaderProgram();
             glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
             if (myCamera.getCameraTarget().z > 121.0f) {
-                animatie = false;
+                start_animation = false;
                 break;
             }
             break;

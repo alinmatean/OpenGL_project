@@ -17,6 +17,11 @@ uniform	vec3 lightDir_p;
 uniform	vec3 lightColor_p;
 uniform int point;
 
+uniform vec3 lightPos_p2;
+uniform	vec3 lightDir_p2;
+uniform	vec3 lightColor_p2;
+uniform int point2;
+
 //texture
 uniform sampler2D diffuseTexture;
 uniform sampler2D specularTexture;
@@ -41,13 +46,21 @@ in vec4 fragPosLightSpace;
 vec3 ambient_point;
 vec3 diffuse_point;
 vec3 specular_point;
+vec3 ambient_point2;
+vec3 diffuse_point2;
+vec3 specular_point2;
 float ambientStrength_point = 0.1f;
-float specularStrength_point = 0.0001f;
-float shininess_point = 1.0f;
+float ambientStrength_point2 = 0.3f;
+float specularStrength_point = 0.001f;
+float specularStrength_point2 = 1.0f;
+float shininess_point = 10.0f;
+float shininess_point2 = 50.0f;
 
 float constant = 1.0f;
-float linear = 0.022;
-float quadratic = 0.0019;
+float linear = 0.014;
+float quadratic = 0.0007;
+float linear2 = 0.7;
+float quadratic2 = 1.8;
 
 void computeLightComponents()
 {		
@@ -124,21 +137,21 @@ void pointLight()
     
     // compute light direction
     vec3 p_lightDirN = normalize(lightPos_p - fPosEye.xyz);
-    
-    // compute distance to light
-    float dist = length(lightPos_p - fPosEye.xyz);
-    
-    // compute attenuation
-    float att = 1.0f / (constant + linear * dist + quadratic * (dist * dist));
-    
-    // compute view direction
+	
+	// compute view direction
     vec3 p_viewDirN = normalize(cameraPosEye - fPosEye.xyz);
     
     // compute half vector
     vec3 halfVector = normalize(p_lightDirN + p_viewDirN);
     
-    // compute specular coefficient
+    // compute distance to light
+    float dist = length(lightPos_p - fPosEye.xyz);
+    
+	// compute specular coefficient
     float p_specCoeff = pow(max(dot(normalEye, halfVector), 0.0f), shininess_point);
+
+    // compute attenuation
+    float att = 1.0f / (constant + linear * dist + quadratic * (dist * dist));
     
     // compute ambient light
     ambient_point = att * ambientStrength_point * lightColor_p;
@@ -150,10 +163,46 @@ void pointLight()
     specular_point = att * specularStrength_point * p_specCoeff * lightColor_p;
 }
 
+void pointLight_house()
+{
+	vec3 cameraPosEye = vec3(0.0f);
+    
+    // transform normal
+    vec3 normalEye = normalize(fNormal);
+    
+    // compute light direction
+    vec3 p_lightDirN = normalize(lightPos_p2 - fPosEye.xyz);
+	
+	// compute view direction
+    vec3 p_viewDirN = normalize(cameraPosEye - fPosEye.xyz);
+    
+    // compute half vector
+    vec3 halfVector = normalize(p_lightDirN + p_viewDirN);
+    
+    // compute distance to light
+    float dist = length(lightPos_p2 - fPosEye.xyz);
+    
+	// compute specular coefficient
+    float p_specCoeff = pow(max(dot(normalEye, halfVector), 0.0f), shininess_point2);
+
+    // compute attenuation
+    float att = 1.0f / (constant + linear2 * dist + quadratic2 * (dist * dist));
+    
+    // compute ambient light
+    ambient_point2 = att * ambientStrength_point2 * lightColor_p2;
+    
+    // compute diffuse light
+    diffuse_point2 = att * max(dot(normalEye, p_lightDirN), 0.0f) * lightColor_p2;
+    
+    // compute specular light
+    specular_point2 = att * specularStrength_point2 * p_specCoeff * lightColor_p2;
+}
+
 void main() 
 {
 	computeLightComponents();
 	pointLight();
+	pointLight_house();
 
 	vec3 baseColor = vec3(0.9f, 0.35f, 0.0f);//orange
 	
@@ -165,14 +214,18 @@ void main()
 	diffuse_point *= texture(diffuseTexture, fTexCoords).rgb;
 	specular_point *= texture(specularTexture, fTexCoords).rgb;
 
+	ambient_point2 *= texture(diffuseTexture, fTexCoords).xyz;
+	diffuse_point2 *= texture(diffuseTexture, fTexCoords).rgb;
+	specular_point2 *= texture(specularTexture, fTexCoords).rgb;
 
 	vec3 color_p = min(ambient_point + diffuse_point + specular_point, 1.0f);
+	vec3 color_p_house = min(ambient_point2 + diffuse_point2 + specular_point2, 1.0f);
 	shadow = computeShadow();
 
 	vec3 color_d = min((ambient + (1.0f - shadow)*diffuse) + (1.0f - shadow)*specular, 1.0f);
 	vec3 color;
 	if(point == 1){
-		color = color_p + color_d;
+		color = color_p + color_p_house + color_d;
 	}
 	else{
 		color = color_d;
